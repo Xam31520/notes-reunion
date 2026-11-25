@@ -63,14 +63,19 @@ async function update(id, patch) {
 const DEFAULTS = {
   apiKey: '',
   baseUrl: 'https://api.mistral.ai',
-  sttModel: 'voxtral-mini-latest',
+  sttModel: 'voxtral-mini-transcribe-3',
   chatModel: 'mistral-medium-latest',
   vocab: '',
   keepAudio: true,
 };
+const OLD_STT_MODELS = ['voxtral-mini-latest', 'voxtral-mini-2602', 'voxtral-small-latest'];
 function settings() {
-  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('settings') || '{}') }; }
-  catch { return { ...DEFAULTS }; }
+  let s;
+  try { s = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('settings') || '{}') }; }
+  catch { s = { ...DEFAULTS }; }
+  // Anciens noms de modèles que l'API de transcription n'accepte plus.
+  if (!s.sttModel || OLD_STT_MODELS.includes(s.sttModel)) s.sttModel = DEFAULTS.sttModel;
+  return s;
 }
 function saveSettings(s) { localStorage.setItem('settings', JSON.stringify(s)); }
 const apiBase = () => (settings().baseUrl || DEFAULTS.baseUrl).replace(/\/+$/, '');
@@ -130,6 +135,11 @@ async function transcribe(blob, fileName) {
     // Si l'API refuse la langue forcée avec la diarisation, on réessaie en détection auto.
     if ((e.status === 400 || e.status === 422) && /language/i.test(e.message)) {
       return apiFetch('/v1/audio/transcriptions', { method: 'POST', body: build(false) });
+    }
+    // Modèle refusé : on réessaie avec le modèle recommandé par Mistral.
+    if (e.status >= 400 && e.status < 500 && /model/i.test(e.message) && s.sttModel !== DEFAULTS.sttModel) {
+      s.sttModel = DEFAULTS.sttModel;
+      return apiFetch('/v1/audio/transcriptions', { method: 'POST', body: build(true) });
     }
     throw e;
   }

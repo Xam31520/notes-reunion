@@ -1,5 +1,5 @@
 // Met en cache l'application pour qu'elle s'ouvre hors ligne. Les appels à l'API ne passent pas par ici.
-const CACHE = 'notes-reunion-v1';
+const CACHE = 'notes-reunion-v2';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
