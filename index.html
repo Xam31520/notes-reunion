@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111418">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Notes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>Notes de réunion</title>
+</head>
+<body>
+  <header class="topbar">
+    <button id="backBtn" class="icon-btn" hidden aria-label="Retour">‹</button>
+    <h1 id="viewTitle">Réunions</h1>
+    <button id="settingsBtn" class="icon-btn" aria-label="Réglages">⚙︎</button>
+  </header>
+
+  <main id="app"></main>
+
+  <input id="fileInput" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm,.flac" multiple hidden>
+
+  <template id="tpl-list">
+    <section class="view">
+      <div id="setupHint" class="card hint" hidden>
+        Commence par entrer ta clé API Mistral dans les <a href="#/settings">réglages</a>.
+      </div>
+      <button id="importBtn" class="big-btn">＋ Importer un enregistrement</button>
+      <p class="muted small center">Depuis Dictaphone : Partager → Enregistrer dans Fichiers, puis Importer ici.</p>
+      <div class="row">
+        <input id="searchInput" type="search" placeholder="Rechercher dans les réunions" autocomplete="off">
+      </div>
+      <button id="askAllBtn" class="secondary-btn">💬 Poser une question sur tout l'historique</button>
+      <ul id="meetingList" class="list"></ul>
+      <p id="emptyList" class="muted center" hidden>Aucune réunion pour l'instant.</p>
+    </section>
+  </template>
+
+  <template id="tpl-meeting">
+    <section class="view">
+      <input id="titleInput" class="title-input" aria-label="Titre">
+      <p id="meta" class="muted small"></p>
+      <div id="statusBox" class="card status" hidden></div>
+      <audio id="player" controls preload="metadata"></audio>
+
+      <div class="tabs" role="tablist">
+        <button data-tab="transcript" class="tab active">Transcription</button>
+        <button data-tab="summary" class="tab">Résumé</button>
+        <button data-tab="chat" class="tab">Questions</button>
+      </div>
+
+      <div data-panel="transcript" class="panel">
+        <details id="speakersBox" class="card">
+          <summary>Nommer les intervenants</summary>
+          <div id="speakersForm"></div>
+        </details>
+        <div id="transcript" class="transcript"></div>
+      </div>
+
+      <div data-panel="summary" class="panel" hidden>
+        <button id="summarizeBtn" class="secondary-btn">✨ Générer le résumé</button>
+        <div id="summary" class="md card"></div>
+      </div>
+
+      <div data-panel="chat" class="panel" hidden>
+        <div id="chatLog" class="chat"></div>
+        <form id="chatForm" class="chat-form">
+          <textarea id="chatInput" rows="2" placeholder="Ex. : Qu'a-t-on décidé sur le budget ?"></textarea>
+          <button class="send-btn" type="submit">Envoyer</button>
+        </form>
+      </div>
+
+      <div class="actions">
+        <button id="exportBtn" class="secondary-btn">⤴︎ Exporter le texte</button>
+        <button id="retryBtn" class="secondary-btn" hidden>↻ Relancer la transcription</button>
+        <button id="deleteBtn" class="danger-btn">Supprimer</button>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-ask-all">
+    <section class="view">
+      <p class="muted small">Les questions portent sur toutes tes réunions transcrites. Les résumés sont utilisés quand ils existent, et le texte complet des réunions les plus pertinentes est ajouté.</p>
+      <div id="chatLog" class="chat"></div>
+      <form id="chatForm" class="chat-form">
+        <textarea id="chatInput" rows="2" placeholder="Ex. : Quelles actions m'a-t-on confiées ce mois-ci ?"></textarea>
+        <button class="send-btn" type="submit">Envoyer</button>
+      </form>
+      <button id="clearChatBtn" class="link-btn">Effacer cette conversation</button>
+    </section>
+  </template>
+
+  <template id="tpl-settings">
+    <section class="view">
+      <form id="settingsForm" class="card form">
+        <label>Clé API Mistral
+          <input name="apiKey" type="password" autocomplete="off" placeholder="Colle ta clé ici">
+        </label>
+        <p class="muted small">Elle reste uniquement sur ce téléphone. Crée-la sur console.mistral.ai → API Keys.</p>
+        <details>
+          <summary>Avancé</summary>
+          <label>Adresse de l'API (ou de ton relais)
+            <input name="baseUrl" type="url" placeholder="https://api.mistral.ai">
+          </label>
+          <label>Modèle de transcription
+            <input name="sttModel" placeholder="voxtral-mini-latest">
+          </label>
+          <label>Modèle pour résumés et questions
+            <input name="chatModel" placeholder="mistral-medium-latest">
+          </label>
+          <label>Mots à reconnaître (noms propres, sigles), séparés par des virgules
+            <input name="vocab" placeholder="Ex. : Kubernetes, Mme Dubois, OKR">
+          </label>
+          <label class="check"><input name="keepAudio" type="checkbox"> Garder une copie de l'audio dans l'app</label>
+        </details>
+        <button class="big-btn" type="submit">Enregistrer</button>
+        <p id="settingsSaved" class="muted small center" hidden>Réglages enregistrés.</p>
+      </form>
+      <div class="card">
+        <h2>Sauvegarde</h2>
+        <p class="muted small">Exporte toutes les transcriptions, résumés et questions dans un fichier (sans l'audio), et réimporte-le si besoin.</p>
+        <div class="actions">
+          <button id="backupBtn" class="secondary-btn">Exporter la sauvegarde</button>
+          <button id="restoreBtn" class="secondary-btn">Importer une sauvegarde</button>
+        </div>
+        <input id="restoreInput" type="file" accept="application/json,.json" hidden>
+        <p id="storageInfo" class="muted small"></p>
+      </div>
+    </section>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
